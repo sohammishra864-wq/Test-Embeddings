@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EvolveBench Metrics Framework</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e1e4ed;
+    --muted: #8b8fa3;
+    --accent: #6c7aed;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --orange: #fb923c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 0 28px; border-bottom: 1px solid var(--border); margin-bottom: 28px;
+  }
+  header h1 { font-size: 22px; font-weight: 600; }
+  header span { color: var(--muted); font-size: 14px; }
+
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    background: var(--surface); border-radius: 8px; padding: 4px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 8px 20px; border-radius: 6px; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    border: none; background: none; transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+  }
+  .card h3 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); margin-bottom: 12px;
+  }
+
+  textarea {
+    width: 100%; min-height: 260px; padding: 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 13px; resize: vertical; line-height: 1.5;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .btn {
+    padding: 10px 28px; border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+
+  select {
+    padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 14px;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+
+  /* Results */
+  .results-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .results-header h2 { font-size: 18px; font-weight: 600; }
+  .badge {
+    padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+  }
+  .badge-ok { background: rgba(52,211,153,0.15); color: var(--green); }
+  .badge-warn { background: rgba(251,191,36,0.15); color: var(--yellow); }
+
+  .dim-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; margin-bottom: 12px;
+  }
+  .dim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .dim-name { font-weight: 600; font-size: 15px; }
+  .dim-score { font-size: 20px; font-weight: 700; }
+  .dim-outcome {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; margin-bottom: 8px;
+  }
+  .outcome-high { background: rgba(52,211,153,0.15); color: var(--green); }
+  .outcome-mid { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .outcome-low { background: rgba(248,113,113,0.15); color: var(--red); }
+  .outcome-pending { background: rgba(251,146,60,0.15); color: var(--orange); }
+
+  .bar-track {
+    width: 100%; height: 8px; background: var(--bg);
+    border-radius: 4px; overflow: hidden; margin-top: 6px;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dim-interp { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .dim-status { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  #results-area, #single-result-area, #agg-result-area, #episode-result-area { margin-top: 28px; }
+
+  .error-msg {
+    background: rgba(248,113,113,0.1); border: 1px solid var(--red);
+    border-radius: 8px; padding: 12px 16px; color: var(--red); font-size: 14px;
+  }
+
+  /* Aggregation table */
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td {
+    padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Hypothesis count for aggregation */
+  .hyp-count-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .hyp-count-row label { font-size: 14px; color: var(--muted); }
+  input[type="number"] {
+    width: 70px; padding: 8px 10px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-size: 14px; text-align: center;
+  }
+  input[type="number"]:focus { outline: none; border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>EvolveBench Metrics Framework</h1>
+    <span>6 Dimensions &middot; Execution Engine &middot; No Composite Scores</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('full')">Full Evaluation</button>
+    <button class="tab" onclick="switchTab('single')">Single Dimension</button>
+    <button class="tab" onclick="switchTab('aggregate')">Episode Aggregation</button>
+    <button class="tab" onclick="switchTab('episode')">Episode Flow</button>
+  </div>
+
+  <!-- Full Evaluation -->
+  <div id="panel-full" class="panel active">
+    <div class="grid">
+      <div class="card">
+        <h3>Hypothesis</h3>
+        <textarea id="hypothesis">{{ default_hypothesis }}</textarea>
+      </div>
+      <div class="card">
+        <h3>Context</h3>
+        <textarea id="context">{{ default_context }}</textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-eval" onclick="runEval()">Evaluate All 6 Dimensions</button>
+    </div>
+    <div id="results-area"></div>
+  </div>
+
+  <!-- Single Dimension -->
+  <div id="panel-single" class="panel">
+    <div class="grid">
+      <div class="card">
+        <h3>Hypothesis</h3>
+        <textarea id="hypothesis-single">{{ default_hypothesis }}</textarea>
+      </div>
+      <div class="card">
+        <h3>Context</h3>
+        <textarea id="context-single">{{ default_context }}</textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <select id="dim-select">
+        {% for d in dimensions %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-primary" onclick="runSingle()">Evaluate Dimension</button>
+    </div>
+    <div id="single-result-area"></div>
+  </div>
+
+  <!-- Aggregation -->
+  <div id="panel-aggregate" class="panel">
+    <div class="card">
+      <h3>Context (shared across all hypotheses)</h3>
+      <textarea id="context-agg" style="min-height:140px">{{ default_context }}</textarea>
+    </div>
+    <div style="margin-top:16px">
+      <div class="card">
+        <h3>Hypotheses (JSON array)</h3>
+        <textarea id="hypotheses-agg" style="min-height:200px">[
+{{ default_hypothesis }}
+]</textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="runAggregate()">Aggregate Episode</button>
+    </div>
+    <div id="agg-result-area"></div>
+  </div>
+
+  <!-- Episode Flow -->
+  <div id="panel-episode" class="panel">
+    <div class="card">
+      <h3>Episode Configuration (manifest + instance + submission)</h3>
+      <textarea id="episode-config" style="min-height:400px">{{ default_episode_config }}</textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="runEpisode()">Run Full Episode</button>
+    </div>
+    <div id="episode-result-area"></div>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function barColor(score) {
+  if (score >= 0.7) return 'var(--green)';
+  if (score >= 0.4) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+function outcomeClass(score, status) {
+  if (status === 'pending_expert_review') return 'outcome-pending';
+  if (score >= 0.7) return 'outcome-high';
+  if (score >= 0.4) return 'outcome-mid';
+  return 'outcome-low';
+}
+
+function formatDim(name) {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderResult(r) {
+  const pct = ((r.score || 0) * 100).toFixed(0);
+  return `
+    <div class="dim-card">
+      <div class="dim-header">
+        <span class="dim-name">${formatDim(r.dimension)}</span>
+        <span class="dim-score" style="color:${barColor(r.score || 0)}">${pct}%</span>
+      </div>
+      <span class="dim-outcome ${outcomeClass(r.score || 0, r.status)}">${r.outcome.replace(/_/g, ' ')}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barColor(r.score || 0)}"></div></div>
+      <div class="dim-interp">${r.interpretation}</div>
+      <div class="dim-status">Status: ${r.status}</div>
+    </div>`;
+}
+
+function parseField(id) {
+  try { return JSON.parse(document.getElementById(id).value); }
+  catch(e) { throw new Error(`Invalid JSON in "${id}": ${e.message}`); }
+}
+
+function showError(areaId, msg) {
+  document.getElementById(areaId).innerHTML = `<div class="error-msg">${msg}</div>`;
+}
+
+async function runEval() {
+  const area = 'results-area';
+  try {
+    const hypothesis = parseField('hypothesis');
+    const context = parseField('context');
+    document.getElementById(area).innerHTML = '<div class="spinner"></div>';
+
+    const resp = await fetch('/api/evaluate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ hypothesis, context, episode_id: 'ep-1' }),
+    });
+    const data = await resp.json();
+
+    const resolved = data.all_resolved;
+    document.getElementById(area).innerHTML = `
+      <div class="results-header">
+        <h2>${data.dimension_count} Dimensions Evaluated</h2>
+        <span class="badge ${resolved ? 'badge-ok' : 'badge-warn'}">
+          ${resolved ? 'All Resolved' : 'Pending Review'}
+        </span>
+      </div>
+      ${data.results.map(renderResult).join('')}
+    `;
+  } catch(e) { showError(area, e.message); }
+}
+
+async function runSingle() {
+  const area = 'single-result-area';
+  try {
+    const hypothesis = parseField('hypothesis-single');
+    const context = parseField('context-single');
+    const dimension = document.getElementById('dim-select').value;
+    document.getElementById(area).innerHTML = '<div class="spinner"></div>';
+
+    const resp = await fetch('/api/evaluate_single', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ dimension, hypothesis, context }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error);
+    }
+    const r = await resp.json();
+    document.getElementById(area).innerHTML = `
+      <div class="results-header"><h2>Single Dimension Result</h2></div>
+      ${renderResult(r)}
+    `;
+  } catch(e) { showError(area, e.message); }
+}
+
+async function runAggregate() {
+  const area = 'agg-result-area';
+  try {
+    const hypotheses = parseField('hypotheses-agg');
+    const context = parseField('context-agg');
+    if (!Array.isArray(hypotheses)) throw new Error('Hypotheses must be a JSON array');
+    document.getElementById(area).innerHTML = '<div class="spinner"></div>';
+
+    const resp = await fetch('/api/aggregate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ hypotheses, context, episode_id: 'ep-1' }),
+    });
+    const data = await resp.json();
+    const dims = Object.entries(data.dimensions);
+
+    let rows = dims.map(([name, s]) => `
+      <tr>
+        <td style="font-weight:600">${formatDim(name)}</td>
+        <td>${s.mean}</td>
+        <td>${s.min}</td>
+        <td>${s.max}</td>
+        <td>${s.count}</td>
+      </tr>`).join('');
+
+    document.getElementById(area).innerHTML = `
+      <div class="results-header">
+        <h2>Episode Aggregation</h2>
+        <span class="badge badge-ok">${data.hypothesis_count} hypotheses</span>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Dimension</th><th>Mean</th><th>Min</th><th>Max</th><th>Count</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  } catch(e) { showError(area, e.message); }
+}
+
+async function runEpisode() {
+  const area = 'episode-result-area';
+  try {
+    const config = parseField('episode-config');
+    document.getElementById(area).innerHTML = '<div class="spinner"></div>';
+
+    const resp = await fetch('/api/run_episode', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(config),
+    });
+    const data = await resp.json();
+
+    if (data.error && !data.lifecycle_log) {
+      throw new Error(data.error);
+    }
+
+    const stateColor = data.final_state === 'archived' ? 'badge-ok' :
+                        data.final_state === 'failed' ? 'badge-warn' : 'badge-ok';
+
+    let logHtml = data.lifecycle_log ? data.lifecycle_log.map(l =>
+      `<div style="padding:4px 0;font-size:13px;font-family:monospace;color:var(--muted)">
+        <span style="color:var(--accent)">&rarr;</span> ${l}
+      </div>`).join('') : '';
+
+    let failHtml = '';
+    if (data.failures && data.failures.length > 0) {
+      failHtml = `<div class="card" style="margin-top:12px;border-color:var(--red)">
+        <h3 style="color:var(--red)">Failures</h3>
+        ${data.failures.map(f => `<div style="font-size:13px;padding:4px 0">
+          <strong>${f.stage}</strong> [${f.category}]: ${f.detail} <span style="color:var(--muted)">(${f.scope})</span>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    let dimHtml = '';
+    if (data.dimension_results && data.dimension_results.length > 0) {
+      dimHtml = data.dimension_results.map(r => renderResult(r)).join('');
+    }
+
+    let aggHtml = '';
+    if (data.aggregation && data.aggregation.dimensions) {
+      const dims = Object.entries(data.aggregation.dimensions);
+      const rows = dims.map(([name, s]) => `
+        <tr>
+          <td style="font-weight:600">${formatDim(name)}</td>
+          <td>${s.mean}</td><td>${s.min}</td><td>${s.max}</td><td>${s.count}</td>
+        </tr>`).join('');
+      aggHtml = `<div class="card" style="margin-top:12px">
+        <h3>Aggregation</h3>
+        <table>
+          <thead><tr><th>Dimension</th><th>Mean</th><th>Min</th><th>Max</th><th>Count</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    document.getElementById(area).innerHTML = `
+      <div class="results-header">
+        <h2>Episode Complete</h2>
+        <span class="badge ${stateColor}">${data.final_state}</span>
+      </div>
+      <div class="grid" style="margin-bottom:16px">
+        <div class="card">
+          <h3>Lifecycle Log</h3>
+          ${logHtml}
+        </div>
+        <div class="card">
+          <h3>Summary</h3>
+          <div style="font-size:14px;line-height:2">
+            <div>Validated hypotheses: <strong>${data.validated_count || 0}</strong></div>
+            <div>Excluded hypotheses: <strong>${data.excluded_count || 0}</strong></div>
+            <div>Delivered entities: <strong>${data.delivery_entity_count || 0}</strong></div>
+          </div>
+        </div>
+      </div>
+      ${failHtml}
+      ${dimHtml}
+      ${aggHtml}
+    `;
+  } catch(e) { showError(area, e.message); }
+}
+</script>
+</body>
+</html>
