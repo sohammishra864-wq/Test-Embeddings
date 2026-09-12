@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.env
+*.db
+*.sqlite3
+instance/
+.flask_session/
+venv/
+.venv/
+.idea/
+.vscode/
+*.log
